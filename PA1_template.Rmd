@@ -2,19 +2,81 @@
 
 
 ## Loading and preprocessing the data
+```{r 'load',echo=FALSE}
+x <- read.csv("../activity.csv")
+x$date <- as.Date(x$date)
 
-
-
+```
 ## What is mean total number of steps taken per day?
+```{r 'foo', echo=FALSE}
 
+sumByDay <- function(x) {
+  aggregate(steps ~ date, data=x, sum, na.action=na.omit)
+}
 
+sumByDay(x)
+```
+### histogram of the total number of steps taken each day
+```{r 'hist unfilled', echo=FALSE}
 
+hist(sumByDay(x)$steps, breaks=24, xlab="Total Steps", main="Total Number of Steps Taken")
+```
 ## What is the average daily activity pattern?
+```{r 'daily stats', echo=FALSE}
+unfilled.mean <- mean(sumByDay(x)$steps)
+unfilled.median <-median(sumByDay(x)$steps)
+```
+   daily mean : `r unfilled.mean`
+   
+   daily median: `r unfilled.median`
 
+### mean of values each day 
+```{r}
 
+meanStepsByInterval <- function(x) {
+  aggregate(steps ~ interval, data=x , mean, na.action=na.omit)
+}
 
-## Imputing missing values
+m <- meanStepsByInterval(x)
 
+library(ggplot2)
+qplot(m$interval, m$steps, geom="line", ylab="Ave. Steps", xlab="Interval")
+```
 
+# Imputing missing values
+```{r}
+filledX <- x
+filledX$isWeekday <- !weekdays(filledX$date, abbreviate=TRUE) %in% c("Sat", "Sun")
+
+```
+## identify rows missing data
+```{r}
+missingRows <- which(is.na(filledX$steps))
+```
+## define function to return the mean of a given interval across days
+```{r}
+intervalMean <- function(interval){
+  sum(m[m$interval == interval,"steps"])
+}
+```
+## using sapply, replace missing values with the mean for that interval
+```{r}
+filledX[missingRows, "steps"] <- sapply(x[missingRows,]$interval, intervalMean)
+hist(sumByDay(filledX)$steps, breaks=24,xlab="Total Steps")
+mean(sumByDay(filledX)$steps)
+median(sumByDay(filledX)$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+filledX$isWeekday <- ifelse(weekdays(filledX$date, abbreviate=TRUE)
+                            %in% c("Sat", "Sun"), "Weekend", "Weekday")
+
+meanStepsByIntervalWkday <- function(x) {
+  aggregate(steps ~ interval+isWeekday, data=x , mean, na.action=na.omit)
+}
+
+filledMeanX <- meanStepsByIntervalWkday(filledX)
+qplot(interval, steps, data=filledMeanX, facets=isWeekday~., 
+      geom="line", color=isWeekday) + stat_smooth(method="loess")
+```

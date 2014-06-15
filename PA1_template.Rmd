@@ -2,10 +2,10 @@
 
 
 ## Loading and preprocessing the data
-```{r 'load',echo=FALSE}
-x <- read.csv("../activity.csv")
+```{r 'load'}
+x <- read.csv("activity.csv")
 x$date <- as.Date(x$date)
-
+head(x)
 ```
 ## What is mean total number of steps taken per day?
 ```{r 'foo', echo=FALSE}
@@ -14,24 +14,21 @@ sumByDay <- function(x) {
   aggregate(steps ~ date, data=x, sum, na.action=na.omit)
 }
 
-sumByDay(x)
+head(sumByDay(x))
+
 ```
 ### histogram of the total number of steps taken each day
-```{r 'hist unfilled', echo=FALSE}
+```{r 'hist unfilled'}
 
 hist(sumByDay(x)$steps, breaks=24, xlab="Total Steps", main="Total Number of Steps Taken")
 ```
 ## What is the average daily activity pattern?
-```{r 'daily stats', echo=FALSE}
-unfilled.mean <- mean(sumByDay(x)$steps)
-unfilled.median <-median(sumByDay(x)$steps)
+```{r 'daily stats'}
+mean(sumByDay(x)$steps)
+median(sumByDay(x)$steps)
 ```
-   daily mean : `r unfilled.mean`
-   
-   daily median: `r unfilled.median`
-
 ### mean of values each day 
-```{r}
+```{r 'daily mean'}
 
 meanStepsByInterval <- function(x) {
   aggregate(steps ~ interval, data=x , mean, na.action=na.omit)
@@ -42,33 +39,38 @@ m <- meanStepsByInterval(x)
 library(ggplot2)
 qplot(m$interval, m$steps, geom="line", ylab="Ave. Steps", xlab="Interval")
 ```
-
-# Imputing missing values
+# Interval with maximum number of steps:
 ```{r}
+x[!is.na(x$steps) & x$steps == max(x$steps, na.rm=TRUE),]
+
+```
+# Imputing missing values
+Missing values will be replaced by the average number of steps reported for that time interval.
+```{r 'impute missing values'}
 filledX <- x
 filledX$isWeekday <- !weekdays(filledX$date, abbreviate=TRUE) %in% c("Sat", "Sun")
 
 ```
-## identify rows missing data
-```{r}
+## Identify rows missing data
+```{r 'id missing rows'}
 missingRows <- which(is.na(filledX$steps))
 ```
-## define function to return the mean of a given interval across days
-```{r}
+## Define function to return the mean of a given interval across days
+```{r 'interval mean function'}
 intervalMean <- function(interval){
   sum(m[m$interval == interval,"steps"])
 }
 ```
-## using sapply, replace missing values with the mean for that interval
-```{r}
+## Using sapply, replace missing values with the mean for that interval
+```{r 'replace missing values'}
 filledX[missingRows, "steps"] <- sapply(x[missingRows,]$interval, intervalMean)
-hist(sumByDay(filledX)$steps, breaks=24,xlab="Total Steps")
+hist(sumByDay(filledX)$steps, breaks=24,xlab="Total Steps", main="Total Number of Steps Taken (filled values)")
 mean(sumByDay(filledX)$steps)
 median(sumByDay(filledX)$steps)
 ```
 
-## Are there differences in activity patterns between weekdays and weekends?
-```{r}
+# Differences in activity patterns between weekdays and weekends?
+```{r 'weekend-weekday differences'}
 filledX$isWeekday <- ifelse(weekdays(filledX$date, abbreviate=TRUE)
                             %in% c("Sat", "Sun"), "Weekend", "Weekday")
 
